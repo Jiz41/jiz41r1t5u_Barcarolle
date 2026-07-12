@@ -1,0 +1,6 @@
+# 憲章: 生データ(mbrace K/Bファイル)の再配布・転載は永久禁止
+data/raw/
+data/.parse_tmp/
+data/collect_run.log
+data/collect_failures.log
+data/fixtures/toda_races.json
