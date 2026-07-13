@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="ja" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="app-version" content="0.3.2">
+<title>華耀旋臨 自在律:Barcarolle 成績</title>
+<style>
+  :root, html[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #0c0d11;
+    --panel: #15171e;
+    --panel-2: #1d2029;
+    --border: #2e3140;
+    --grid-line: #262a36;
+    --text: #eceae2;
+    --text-dim: #979aa6;
+    --accent: #ff4d6d;
+    --accent-2: #ffb62e;
+    --gold: #ffb62e;
+    --neon-a: #39ffb0;
+    --neon-b: #4dc3ff;
+    --tier-a: #2ecc71;
+    --tier-b: #4a90d9;
+    --tier-c: #6b6f7a;
+  }
+  html[data-theme="light"] {
+    color-scheme: light;
+    --bg: #f2f1ec;
+    --panel: #ffffff;
+    --panel-2: #eceae2;
+    --border: #d5d2c6;
+    --grid-line: #ddd9cc;
+    --text: #1b1c22;
+    --text-dim: #6d707c;
+    --accent: #d92b4e;
+    --accent-2: #c07f00;
+    --gold: #c07f00;
+    --neon-a: #00b573;
+    --neon-b: #0077cc;
+    --tier-a: #1a9e57;
+    --tier-b: #2f6db0;
+    --tier-c: #8a8d97;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", sans-serif;
+    font-size: 16px;
+    line-height: 1.5;
+    max-width: 100%;
+    overflow-x: hidden;
+    transition: background 0.3s, color 0.3s;
+  }
+  .num { font-family: "SF Mono", "Roboto Mono", ui-monospace, "SFMono-Regular", Menlo, monospace; font-variant-numeric: tabular-nums; }
+  header {
+    padding: 14px 16px 10px;
+    border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; z-index: 10;
+    background: color-mix(in srgb, var(--bg) 92%, transparent);
+    backdrop-filter: blur(8px);
+    display: flex; align-items: flex-start; justify-content: space-between;
+  }
+  header h1 {
+    margin: 0;
+    font-size: 32px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    line-height: 1.2;
+  }
+  header h1 .brand {
+    display: inline-block;
+    background: linear-gradient(92deg, var(--text) 5%, var(--gold) 55%, var(--accent) 95%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+  }
+  header h1 .series {
+    display: block;
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: 0.28em;
+    color: var(--gold);
+    margin-top: 3px;
+  }
+  header .gg {
+    display: block;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    color: var(--text-dim);
+    margin-top: 4px;
+  }
+  #theme-toggle {
+    background: var(--panel); border: 1px solid var(--border); color: var(--text);
+    border-radius: 4px; min-height: 40px; min-width: 44px; font-size: 18px; cursor: pointer;
+    margin-left: 10px; flex-shrink: 0;
+  }
+  main {
+    padding: 12px 12px 40px;
+    max-width: 640px;
+    margin: 0 auto;
+  }
+  section { margin: 18px 0; }
+  h2 {
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: var(--text-dim);
+    margin: 0 0 8px;
+    text-transform: uppercase;
+  }
+  .summary {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+  .stat {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 12px 14px;
+  }
+  .stat .label { font-size: 11px; color: var(--text-dim); letter-spacing: 0.06em; }
+  .stat .value { font-size: 26px; font-weight: 800; margin-top: 2px; }
+  .stat .sub { font-size: 11px; color: var(--text-dim); margin-top: 2px; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  th, td {
+    padding: 8px 6px;
+    text-align: right;
+    border-bottom: 1px solid var(--grid-line);
+    white-space: nowrap;
+  }
+  th:first-child, td:first-child { text-align: left; }
+  thead th {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-dim);
+    letter-spacing: 0.04em;
+    background: var(--panel-2);
+  }
+  tbody tr:last-child td { border-bottom: none; }
+  .tier-tag {
+    display: inline-block;
+    min-width: 20px;
+    text-align: center;
+    padding: 1px 7px;
+    border-radius: 3px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #0c0d11;
+  }
+  .tier-tag.A { background: var(--tier-a); }
+  .tier-tag.B { background: var(--tier-b); color: #fff; }
+  .tier-tag.C { background: var(--tier-c); color: #fff; }
+  .rec-pos { color: var(--neon-a); }
+  .rec-neg { color: var(--text-dim); }
+  .table-scroll { overflow-x: auto; }
+  .detail td { font-size: 12px; }
+  .hit-y { color: var(--neon-a); font-weight: 700; }
+  .hit-n { color: var(--text-dim); }
+  /* 直近明細: スプシ型（本物のtable。全列 左揃え＝字頭統一・薄い縦罫線） */
+  table.recent th, table.recent td {
+    text-align: left;
+    border-left: 1px solid var(--grid-line);
+    padding: 9px 10px;
+    font-size: 13px;
+    font-variant-numeric: tabular-nums;
+  }
+  table.recent th:first-child, table.recent td:first-child { border-left: none; }
+  table.recent th {
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    color: var(--text-dim);
+    background: var(--panel-2, transparent);
+  }
+  tr.rt-row { cursor: pointer; }
+  tr.rt-detail > td { padding: 0; border-left: none; }
+  .race-detail {
+    border-top: 1px dashed var(--grid-line, var(--border));
+    padding: 10px 12px;
+    font-size: 13px;
+  }
+  .rd-row { margin: 4px 0; color: var(--text-dim); }
+  .rd-row b, .rd-row .num { color: var(--text); }
+  .bet-grid { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 8px; }
+  .bet {
+    padding: 3px 8px;
+    border: 1px solid var(--grid-line, var(--border));
+    border-radius: 3px;
+    background: var(--panel-2, transparent);
+    letter-spacing: 0.08em;
+  }
+  .bet-hit {
+    border-color: var(--neon-a);
+    color: var(--neon-a);
+    font-weight: 700;
+    box-shadow: 0 0 8px color-mix(in srgb, var(--neon-a) 35%, transparent);
+  }
+  .note {
+    font-size: 11px;
+    color: var(--text-dim);
+    line-height: 1.6;
+    border-top: 1px solid var(--border);
+    padding-top: 12px;
+    margin-top: 24px;
+  }
+  .loading, .error {
+    text-align: center;
+    padding: 40px 12px;
+    color: var(--text-dim);
+    font-size: 14px;
+  }
+  .error { color: var(--accent); }
+  .subhead { font-size: 11px; color: var(--text-dim); margin: 0 0 8px; }
+
+  /* 直近レース：展開式カード */
+  .race-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    margin-bottom: 8px;
+    overflow: hidden;
+  }
+  .race-card > summary {
+    list-style: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    font-size: 13px;
+  }
+  .race-card > summary::-webkit-details-marker { display: none; }
+  .race-card > summary .rc-date { color: var(--text-dim); min-width: 44px; }
+  .race-card > summary .rc-race { font-weight: 700; min-width: 30px; }
+  .race-card > summary .rc-spacer { flex: 1; }
+  .race-card > summary .rc-result {
+    font-size: 12px; font-weight: 700;
+    padding: 1px 8px; border-radius: 3px;
+  }
+  .race-card > summary .rc-result.y { background: color-mix(in srgb, var(--neon-a) 22%, transparent); color: var(--neon-a); }
+  .race-card > summary .rc-result.n { color: var(--text-dim); border: 1px solid var(--border); }
+  .race-card > summary .rc-chevron { color: var(--text-dim); font-size: 11px; transition: transform 0.2s; }
+  .race-card[open] > summary .rc-chevron { transform: rotate(90deg); }
+  .rc-body {
+    padding: 4px 12px 12px;
+    border-top: 1px solid var(--grid-line);
+  }
+  .rc-finish {
+    font-size: 13px; margin: 8px 0;
+    display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+  }
+  .rc-finish .lbl { color: var(--text-dim); font-size: 11px; }
+  .rc-boat {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 22px; height: 22px; border-radius: 3px;
+    font-weight: 700; font-size: 13px;
+  }
+  .rc-boat.b1 { background: #f4f4f4; color: #1b1c22; }
+  .rc-boat.b2 { background: #333333; color: #fff; }
+  .rc-boat.b3 { background: #e0453f; color: #fff; }
+  .rc-boat.b4 { background: #3778c2; color: #fff; }
+  .rc-boat.b5 { background: #e0c62e; color: #1b1c22; }
+  .rc-boat.b6 { background: #3fae5c; color: #fff; }
+  .rc-arrow { color: var(--text-dim); font-size: 11px; }
+  .rc-bets {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 4px 8px;
+    margin: 8px 0;
+  }
+  .rc-bet {
+    font-size: 13px;
+    padding: 3px 6px;
+    border-radius: 3px;
+    color: var(--text-dim);
+    border: 1px solid transparent;
+  }
+  .rc-bet.win {
+    color: var(--text);
+    font-weight: 700;
+    background: color-mix(in srgb, var(--neon-a) 16%, transparent);
+    border-color: color-mix(in srgb, var(--neon-a) 45%, transparent);
+  }
+  .rc-money {
+    display: flex; gap: 14px; flex-wrap: wrap;
+    font-size: 12px; margin-top: 8px;
+    padding-top: 8px; border-top: 1px solid var(--grid-line);
+  }
+  .rc-money .k { color: var(--text-dim); }
+  .rc-money .v { font-weight: 700; }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1><span class="brand">華耀旋臨</span><span class="series">自在律:Barcarolle</span><span class="gg">成績 / gg</span></h1>
+  </div>
+  <button id="theme-toggle" aria-label="テーマ切替">◐</button>
+</header>
+<main>
+  <div id="app"><div class="loading">シャドーログ集計中…</div></div>
+</main>
+<script>
+  // ===== テーマ切替 =====
+  (function () {
+    var root = document.documentElement;
+    var btn = document.getElementById("theme-toggle");
+    btn.addEventListener("click", function () {
+      root.setAttribute("data-theme", root.getAttribute("data-theme") === "dark" ? "light" : "dark");
+    });
+  })();
+
+  // ===== 集計ロジック（node からも同一関数を呼べるよう純関数化） =====
+  var BarcAgg = (function () {
+    // finish の上位3着と bets の一致で的中判定（hit_bets/recovery の既成値は使わない）
+    function isHit(o) {
+      if (!Array.isArray(o.finish) || o.finish.length < 3) return false;
+      if (!Array.isArray(o.bets)) return false;
+      var f = o.finish.slice(0, 3).join("-");
+      return o.bets.indexOf(f) !== -1;
+    }
+    // 有効行のみ抽出（tier/bets/stake を持つ開催レース）
+    function validRows(records) {
+      var out = [];
+      for (var i = 0; i < records.length; i++) {
+        var o = records[i];
+        if (o && o.tier && Array.isArray(o.bets) && typeof o.stake === "number") out.push(o);
+      }
+      return out;
+    }
+    function blank() { return { n: 0, hits: 0, stake: 0, payout: 0 }; }
+    function accum(b, o) {
+      b.n++;
+      b.stake += o.stake;
+      if (isHit(o)) { b.hits++; b.payout += (o.payout || 0); }
+    }
+    function pct(a, b) { return b > 0 ? (a / b * 100) : 0; }
+    function a1Band(c) {
+      if (typeof c !== "number") return "3-4";
+      if (c <= 2) return "0-2";
+      if (c <= 4) return "3-4";
+      return "5-6";
+    }
+    function monthKey(d) { return (d || "").slice(0, 7); } // YYYY-MM
+
+    // 実運用シャドー期間の起点（これ未満はバックテスト学習期間と重複するため集計対象外）
+    var LIVE_FROM = "2026-07-11";
+
+    function compute(records) {
+      // 実運用シャドー（date >= LIVE_FROM、エンジン初見）のみ集計。遡及再計算分は表示しない。
+      var rows = validRows(records).filter(function (o) { return typeof o.date === "string" && o.date >= LIVE_FROM; });
+      var tiers = ["A", "B", "C"];
+      var bands = ["0-2", "3-4", "5-6"];
+
+      var overall = blank();
+      var byTier = { A: blank(), B: blank(), C: blank() };
+      var byMonthTier = {};   // { "YYYY-MM": {A,B,C, ALL} }
+      var byBandTier = {};    // { "0-2": {A,B,C}, ... }
+      bands.forEach(function (bd) { byBandTier[bd] = { A: blank(), B: blank(), C: blank() }; });
+
+      var minDate = null, maxDate = null;
+
+      for (var i = 0; i < rows.length; i++) {
+        var o = rows[i];
+        var t = o.tier;
+        if (tiers.indexOf(t) === -1) continue;
+
+        accum(overall, o);
+        accum(byTier[t], o);
+
+        var mk = monthKey(o.date);
+        if (!byMonthTier[mk]) byMonthTier[mk] = { A: blank(), B: blank(), C: blank(), ALL: blank() };
+        accum(byMonthTier[mk][t], o);
+        accum(byMonthTier[mk].ALL, o);
+
+        var bd = a1Band(o.a1_count);
+        accum(byBandTier[bd][t], o);
+
+        if (o.date) {
+          if (!minDate || o.date < minDate) minDate = o.date;
+          if (!maxDate || o.date > maxDate) maxDate = o.date;
+        }
+      }
+
+      // 直近20レース（date, race 昇順に並べ末尾20件）
+      var sorted = rows.slice().sort(function (a, b) {
+        if (a.date !== b.date) return a.date < b.date ? -1 : 1;
+        return (a.race || 0) - (b.race || 0);
+      });
+      var recent = sorted.slice(-20).reverse();
+
+      return {
+        rows: rows,
+        overall: overall,
+        byTier: byTier,
+        byMonthTier: byMonthTier,
+        byBandTier: byBandTier,
+        bands: bands,
+        tiers: tiers,
+        minDate: minDate,
+        maxDate: maxDate,
+        recent: recent,
+        pct: pct,
+        isHit: isHit
+      };
+    }
+
+    return { compute: compute, isHit: isHit, validRows: validRows, pct: pct, a1Band: a1Band, LIVE_FROM: LIVE_FROM };
+  })();
+
+  // node から require された場合はここでエクスポートして終了
+  if (typeof module !== "undefined" && module.exports) {
+    module.exports = BarcAgg;
+  }
+</script>
+<script>
+  // ===== データ取得 → 描画（ブラウザのみ） =====
+  (function () {
+    if (typeof document === "undefined") return;
+    var BASE = "https://raw.githubusercontent.com/Jiz41/jiz41r1t5u_Barcarolle/shadow-data/data/shadow/";
+    var START = { y: 2026, m: 7 }; // 実運用開始（2026-07-11）の属する月から
+
+    function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]; }); }
+    function fmtPct(v) { return v.toFixed(1) + "%"; }
+    function fmtYen(v) { return "¥" + v.toLocaleString("ja-JP"); }
+    function recClass(v) { return v >= 100 ? "rec-pos" : "rec-neg"; }
+
+    function monthList() {
+      var now = new Date();
+      var cy = now.getFullYear(), cm = now.getMonth() + 1;
+      var list = [];
+      var y = START.y, m = START.m;
+      while (y < cy || (y === cy && m <= cm)) {
+        list.push(y + ("0" + m).slice(-2));
+        m++; if (m > 12) { m = 1; y++; }
+      }
+      return list;
+    }
+
+    function parseJsonl(text) {
+      var out = [];
+      var lines = text.split("\n");
+      for (var i = 0; i < lines.length; i++) {
+        var l = lines[i].trim();
+        if (!l) continue;
+        try { out.push(JSON.parse(l)); } catch (e) { /* skip broken line */ }
+      }
+      return out;
+    }
+
+    function fetchAll() {
+      var months = monthList();
+      var records = [];
+      var chain = Promise.resolve();
+      months.forEach(function (mk) {
+        chain = chain.then(function () {
+          return fetch(BASE + mk + ".jsonl", { cache: "no-store" }).then(function (r) {
+            if (r.status === 404) { return; } // 未生成月はスキップ（停止しない。開催なし月や整理済み月に耐える）
+            if (!r.ok) throw new Error("HTTP " + r.status + " (" + mk + ")");
+            return r.text().then(function (t) { records = records.concat(parseJsonl(t)); });
+          });
+        });
+      });
+      return chain.then(function () { return records; });
+    }
+
+    function tierRow(label, b, pct) {
+      return "<tr><td>" + label + "</td>" +
+        "<td class='num'>" + b.n + "</td>" +
+        "<td class='num'>" + fmtPct(pct(b.hits, b.n)) + "</td>" +
+        "<td class='num " + recClass(pct(b.payout, b.stake)) + "'>" + fmtPct(pct(b.payout, b.stake)) + "</td>" +
+        "<td class='num'>" + fmtYen(b.stake) + "</td>" +
+        "<td class='num'>" + fmtYen(b.payout) + "</td></tr>";
+    }
+
+    function tierTag(t) { return "<span class='tier-tag " + t + "'>" + t + "</span>"; }
+
+    function render(data) {
+      var pct = data.pct;
+      var html = "";
+
+      // 1. 総合サマリー
+      var ov = data.overall;
+      var period = (data.minDate || "?") + " 〜 " + (data.maxDate || "?");
+      html += "<section><h2>総合サマリー</h2>";
+      html += "<div class='summary'>";
+      html += "<div class='stat'><div class='label'>的中率</div><div class='value num'>" + fmtPct(pct(ov.hits, ov.n)) + "</div><div class='sub'>" + ov.hits + " / " + ov.n + " レース的中</div></div>";
+      html += "<div class='stat'><div class='label'>回収率</div><div class='value num " + recClass(pct(ov.payout, ov.stake)) + "'>" + fmtPct(pct(ov.payout, ov.stake)) + "</div><div class='sub'>" + fmtYen(ov.payout) + " / " + fmtYen(ov.stake) + "</div></div>";
+      html += "<div class='stat'><div class='label'>レース数</div><div class='value num'>" + ov.n + "</div><div class='sub'>全買い対象</div></div>";
+      html += "<div class='stat'><div class='label'>期間</div><div class='value' style='font-size:14px'>" + esc(period) + "</div><div class='sub'>シャドーログ</div></div>";
+      html += "</div></section>";
+
+      // 2. ティア別
+      html += "<section><h2>ティア別成績</h2><div class='table-scroll'><table><thead><tr>" +
+        "<th>ティア</th><th>R数</th><th>的中率</th><th>回収率</th><th>投資</th><th>払戻</th></tr></thead><tbody>";
+      data.tiers.forEach(function (t) {
+        html += tierRow(tierTag(t), data.byTier[t], pct);
+      });
+      html += tierRow("<b>全体</b>", data.overall, pct);
+      html += "</tbody></table></div></section>";
+
+      // 3. 月別推移（月×ティア）
+      html += "<section><h2>月別推移</h2><p class='subhead'>各セル: 的中率 / 回収率</p><div class='table-scroll'><table><thead><tr>" +
+        "<th>月</th><th>A</th><th>B</th><th>C</th><th>全体</th></tr></thead><tbody>";
+      var months = Object.keys(data.byMonthTier).sort();
+      months.forEach(function (mk) {
+        var mt = data.byMonthTier[mk];
+        function cell(b) {
+          if (b.n === 0) return "<td class='num' style='color:var(--text-dim)'>—</td>";
+          return "<td class='num'>" + fmtPct(pct(b.hits, b.n)) + "<br><span class='" + recClass(pct(b.payout, b.stake)) + "'>" + fmtPct(pct(b.payout, b.stake)) + "</span></td>";
+        }
+        html += "<tr><td>" + esc(mk) + "</td>" + cell(mt.A) + cell(mt.B) + cell(mt.C) + cell(mt.ALL) + "</tr>";
+      });
+      html += "</tbody></table></div></section>";
+
+      // 4. A1人数別分解
+      html += "<section><h2>A1人数別分解</h2><p class='subhead'>a1_count 区分 × ティア（的中率 / 回収率）</p><div class='table-scroll'><table><thead><tr>" +
+        "<th>A1人数</th><th>A</th><th>B</th><th>C</th></tr></thead><tbody>";
+      data.bands.forEach(function (bd) {
+        var bt = data.byBandTier[bd];
+        function cell(b) {
+          if (b.n === 0) return "<td class='num' style='color:var(--text-dim)'>—</td>";
+          return "<td class='num'>" + fmtPct(pct(b.hits, b.n)) + "<br><span class='" + recClass(pct(b.payout, b.stake)) + "'>" + fmtPct(pct(b.payout, b.stake)) + "</span><br><span style='font-size:10px;color:var(--text-dim)'>n=" + b.n + "</span></td>";
+        }
+        html += "<tr><td>" + bd + "人</td>" + cell(bt.A) + cell(bt.B) + cell(bt.C) + "</tr>";
+      });
+      html += "</tbody></table></div></section>";
+
+      // 5. 直近20レース明細（本物のtableで列整列を保証。行タップで明細行を開閉）
+      html += "<section><h2>直近20レース</h2><div class='table-scroll'><table class='detail recent'><thead><tr>" +
+        "<th>日付</th><th>R</th><th>TIER</th><th>的中</th><th>払戻</th></tr></thead><tbody>";
+      data.recent.forEach(function (o, i) {
+        var h = data.isHit(o);
+        var f = Array.isArray(o.finish) ? o.finish.slice(0, 3) : [];
+        var fStr = f.length === 3 ? f.join("→") : "－";
+        var combo = f.length === 3 ? f.join("-") : null;
+        var recPct = pct(o.payout || 0, o.stake || 0);
+        var betsHtml = (Array.isArray(o.bets) ? o.bets : []).map(function (b) {
+          return "<span class='bet num" + (b === combo ? " bet-hit" : "") + "'>" + esc(b) + "</span>";
+        }).join("");
+        html += "<tr class='rt-row' data-rt='" + i + "'>" +
+          "<td>" + esc((o.date || "").slice(5)) + "</td>" +
+          "<td class='num'>" + (o.race || "") + "R</td>" +
+          "<td>" + tierTag(o.tier) + "</td>" +
+          "<td class='" + (h ? "hit-y" : "hit-n") + "'>" + (h ? "的中" : "不的中") + "</td>" +
+          "<td class='num'>" + (h ? fmtYen(o.payout || 0) : "—") + "</td></tr>";
+        html += "<tr class='rt-detail' id='rt-detail-" + i + "' hidden><td colspan='5'><div class='race-detail'>" +
+          "<div class='rd-row'>結果: <b class='num'>" + esc(fStr) + "</b></div>" +
+          "<div class='rd-row'>買い目（3連単8点）:</div><div class='bet-grid'>" + betsHtml + "</div>" +
+          "<div class='rd-row'>投資 <span class='num'>" + fmtYen(o.stake || 0) + "</span> ／ 払戻 <span class='num'>" + fmtYen(o.payout || 0) + "</span> ／ 回収 <span class='num " + (recPct >= 100 ? "hit-y" : "hit-n") + "'>" + fmtPct(recPct) + "</span></div>" +
+          "</div></td></tr>";
+      });
+      html += "</tbody></table></div></section>";
+
+      // 6. 注記
+      html += "<div class='note'>集計対象: 2026-07-11以降の実運用ログのみ（遡及再計算分は表示対象外）。<br>数値はシャドーログの自動集計による非公式値でございます。的中・回収は finish 上位3着と buy 目の一致から再計算しており、hit_bets / recovery の記録済み値には依存しておりません。1レース800円（8点×100円）固定・実投票ではございません。</div>";
+
+      document.getElementById("app").innerHTML = html;
+
+      // 明細行の開閉（行タップで直下の明細行のhiddenをトグル）
+      document.querySelectorAll("tr.rt-row").forEach(function (row) {
+        row.addEventListener("click", function () {
+          var d = document.getElementById("rt-detail-" + row.getAttribute("data-rt"));
+          if (d) d.hidden = !d.hidden;
+        });
+      });
+    }
+
+    fetchAll().then(function (records) {
+      if (!records.length) { document.getElementById("app").innerHTML = "<div class='error'>データを取得できませんでした。</div>"; return; }
+      var data = BarcAgg.compute(records);
+      if (!data.rows.length) { document.getElementById("app").innerHTML = "<div class='error'>有効な開催レースがまだございません。</div>"; return; }
+      render(data);
+    }).catch(function (e) {
+      document.getElementById("app").innerHTML = "<div class='error'>集計に失敗いたしました: " + esc(e.message) + "</div>";
+    });
+  })();
+</script>
+</body>
+</html>
