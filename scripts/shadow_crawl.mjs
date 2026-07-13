@@ -14,7 +14,9 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { predictRace } from '../logic/toda_logic.mjs';
 
-const START_DATE = '20260601'; // YYYYMMDD（この日を含む）
+// バックフィルは稼働後の欠測日回収専用。実運用開始日より前を遡る用途に使わないこと
+// （2026-07-11以前はバックテストの学習期間と重複し、実力の証拠にならないため台帳から撤去済み）。
+const START_DATE = '20260711'; // YYYYMMDD（この日を含む）＝実運用シャドー開始日
 const STAKE_PER_POINT = 100;
 const ENGINE_VERSION = 'v0.3.2'; // toda_logic にバージョン輸出が無いため定数で固定
 const TODA_STADIUM = 2;
