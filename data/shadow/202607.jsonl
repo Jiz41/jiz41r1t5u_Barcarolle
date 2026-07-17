@@ -26,3 +26,15 @@
 {"schema":1,"date":"2026-07-14","no_toda":true,"crawled_at":"2026-07-14T15:56:07.022Z"}
 {"schema":1,"date":"2026-07-15","no_toda":true,"crawled_at":"2026-07-15T16:00:41.940Z"}
 {"schema":1,"date":"2026-07-16","no_toda":true,"crawled_at":"2026-07-16T15:54:53.744Z"}
+{"schema":1,"date":"2026-07-17","race":1,"title":"UHA味覚糖杯","grade_number":5,"a1_count":0,"engine_version":"v0.3.2","exhibition_ready":false,"skipped":"no_exhibition","finish":[1,2,3],"crawled_at":"2026-07-17T15:54:23.828Z"}
+{"schema":1,"date":"2026-07-17","race":2,"title":"UHA味覚糖杯","grade_number":5,"a1_count":1,"engine_version":"v0.3.2","exhibition_ready":false,"skipped":"no_exhibition","finish":[2,6,3],"crawled_at":"2026-07-17T15:54:23.828Z"}
+{"schema":1,"date":"2026-07-17","race":3,"title":"UHA味覚糖杯","grade_number":5,"a1_count":1,"engine_version":"v0.3.2","exhibition_ready":false,"skipped":"no_exhibition","finish":[1,5,4],"crawled_at":"2026-07-17T15:54:23.828Z"}
+{"schema":1,"date":"2026-07-17","race":4,"title":"UHA味覚糖杯","grade_number":5,"a1_count":1,"engine_version":"v0.3.2","exhibition_ready":false,"skipped":"no_exhibition","finish":[2,5,1],"crawled_at":"2026-07-17T15:54:23.828Z"}
+{"schema":1,"date":"2026-07-17","race":5,"title":"UHA味覚糖杯","grade_number":5,"a1_count":1,"engine_version":"v0.3.2","exhibition_ready":false,"skipped":"no_exhibition","finish":[4,2,5],"crawled_at":"2026-07-17T15:54:23.828Z"}
+{"schema":1,"date":"2026-07-17","race":6,"title":"UHA味覚糖杯","grade_number":5,"a1_count":1,"engine_version":"v0.3.2","exhibition_ready":false,"skipped":"no_exhibition","finish":[5,2,4],"crawled_at":"2026-07-17T15:54:23.828Z"}
+{"schema":1,"date":"2026-07-17","race":7,"title":"UHA味覚糖杯","grade_number":5,"a1_count":1,"engine_version":"v0.3.2","exhibition_ready":false,"skipped":"no_exhibition","finish":[4,6,2],"crawled_at":"2026-07-17T15:54:23.828Z"}
+{"schema":1,"date":"2026-07-17","race":8,"title":"UHA味覚糖杯","grade_number":5,"a1_count":1,"engine_version":"v0.3.2","exhibition_ready":false,"skipped":"no_exhibition","finish":[4,6,3],"crawled_at":"2026-07-17T15:54:23.828Z"}
+{"schema":1,"date":"2026-07-17","race":9,"title":"UHA味覚糖杯","grade_number":5,"a1_count":0,"engine_version":"v0.3.2","exhibition_ready":false,"skipped":"no_exhibition","finish":[2,4,5],"crawled_at":"2026-07-17T15:54:23.828Z"}
+{"schema":1,"date":"2026-07-17","race":10,"title":"UHA味覚糖杯","grade_number":5,"a1_count":0,"engine_version":"v0.3.2","exhibition_ready":false,"skipped":"no_exhibition","finish":[1,6,3],"crawled_at":"2026-07-17T15:54:23.828Z"}
+{"schema":1,"date":"2026-07-17","race":11,"title":"UHA味覚糖杯","grade_number":5,"a1_count":1,"engine_version":"v0.3.2","exhibition_ready":false,"skipped":"no_exhibition","finish":[3,1,5],"crawled_at":"2026-07-17T15:54:23.828Z"}
+{"schema":1,"date":"2026-07-17","race":12,"title":"UHA味覚糖杯","grade_number":5,"a1_count":6,"engine_version":"v0.3.2","exhibition_ready":false,"skipped":"no_exhibition","finish":[4,3,5],"crawled_at":"2026-07-17T15:54:23.828Z"}
