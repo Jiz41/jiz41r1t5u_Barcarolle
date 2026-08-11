@@ -167,12 +167,8 @@ function round4(n) {
 function loadExisting() {
   const recordedRaceKeys = new Set(); // "YYYYMMDD|race"
   const sentinelDates = new Set(); // 非開催マーカーのある日
-  const raceCountByDate = {}; // YYYYMMDD -> 記録済みレース数（exhibition_ready問わず全件）
-  const readyCountByDate = {}; // YYYYMMDD -> exhibition_ready:true のレース数
-  const staleRaceKeys = new Set(); // exhibition_ready:false だったレースキー（再取得対象）
-  if (!existsSync(SHADOW_DIR)) {
-    return { recordedRaceKeys, sentinelDates, raceCountByDate, readyCountByDate, staleRaceKeys };
-  }
+  const raceCountByDate = {}; // YYYYMMDD -> 記録済みレース数
+  if (!existsSync(SHADOW_DIR)) return { recordedRaceKeys, sentinelDates, raceCountByDate };
   for (const fn of readdirSync(SHADOW_DIR)) {
     if (!/^\d{6}\.jsonl$/.test(fn)) continue;
     const text = readFileSync(path.join(SHADOW_DIR, fn), 'utf8');
@@ -192,18 +188,12 @@ function loadExisting() {
         continue;
       }
       if (rec.race != null) {
-        const key = compact + '|' + rec.race;
-        recordedRaceKeys.add(key);
+        recordedRaceKeys.add(compact + '|' + rec.race);
         raceCountByDate[compact] = (raceCountByDate[compact] || 0) + 1;
-        if (rec.exhibition_ready) {
-          readyCountByDate[compact] = (readyCountByDate[compact] || 0) + 1;
-        } else {
-          staleRaceKeys.add(key);
-        }
       }
     }
   }
-  return { recordedRaceKeys, sentinelDates, raceCountByDate, readyCountByDate, staleRaceKeys };
+  return { recordedRaceKeys, sentinelDates, raceCountByDate };
 }
 
 // ---------- レコード生成 ----------
@@ -223,7 +213,6 @@ function buildRaceRecord(dash, programRace, previewRace, resultRace, crawledAt) 
     grade_number: typeof programRace.grade_number === 'number' ? programRace.grade_number : null,
     a1_count: a1Count,
     engine_version: ENGINE_VERSION,
-    entries: inputs,
   };
 
   const finish = extractFinish(resultRace);
@@ -266,8 +255,7 @@ function buildRaceRecord(dash, programRace, previewRace, resultRace, crawledAt) 
 async function main() {
   mkdirSync(SHADOW_DIR, { recursive: true });
   const today = todayJstCompact();
-  const { recordedRaceKeys, sentinelDates, raceCountByDate, readyCountByDate, staleRaceKeys } =
-    loadExisting();
+  const { recordedRaceKeys, sentinelDates, raceCountByDate } = loadExisting();
   const dates = enumerateDates(START_DATE, today);
 
   // 月ごとに追記行を貯める
@@ -277,14 +265,13 @@ async function main() {
     if (!pending[month]) pending[month] = [];
     pending[month].push(JSON.stringify(obj));
   };
-  const replacedKeys = new Set(); // 今回再生成し、既存行を置換すべきレースキー
 
   const stats = { daysFetched: 0, daysSkipped: 0, sentinels: 0, races: 0, skippedRaces: 0 };
 
   for (const compact of dates) {
     const isToday = compact === today;
     const complete =
-      sentinelDates.has(compact) || (readyCountByDate[compact] || 0) >= RACES_PER_DAY;
+      sentinelDates.has(compact) || (raceCountByDate[compact] || 0) >= RACES_PER_DAY;
     if (!isToday && complete) {
       stats.daysSkipped++;
       continue;
@@ -315,8 +302,7 @@ async function main() {
     for (const programRace of programRaces) {
       const raceNo = programRace.number;
       const key = compact + '|' + raceNo;
-      const isStale = staleRaceKeys.has(key);
-      if (recordedRaceKeys.has(key) && !isStale) continue;
+      if (recordedRaceKeys.has(key)) continue;
 
       const resultRace = resultRaces.find((r) => r.number === raceNo);
       if (!resultRace) continue; // 未確定（未発走）。次回以降にバックフィル。
@@ -324,52 +310,22 @@ async function main() {
       const previewRace = previewRaces.find((r) => r.number === raceNo) || null;
       const rec = buildRaceRecord(dash, programRace, previewRace, resultRace, crawledAt);
       addLine(compact, rec);
-      if (isStale) replacedKeys.add(key);
       recordedRaceKeys.add(key);
-      if (!isStale) raceCountByDate[compact] = (raceCountByDate[compact] || 0) + 1;
-      if (rec.exhibition_ready) {
-        stats.races++;
-        readyCountByDate[compact] = (readyCountByDate[compact] || 0) + 1;
-      } else {
-        stats.skippedRaces++;
-      }
+      raceCountByDate[compact] = (raceCountByDate[compact] || 0) + 1;
+      if (rec.exhibition_ready) stats.races++;
+      else stats.skippedRaces++;
     }
   }
 
-  // 追記（既存内容の末尾に足す。ファイルは date の月で分ける）。
-  // ただし replacedKeys に該当する既存行（旧 exhibition_ready:false）は先に取り除いてから書き込む。
+  // 追記（既存内容の末尾に足す。ファイルは date の月で分ける）
   let writtenLines = 0;
-  const touchedMonths = new Set(Object.keys(pending));
-  if (replacedKeys.size > 0) {
-    for (const key of replacedKeys) {
-      touchedMonths.add(compactToMonth(key.split('|')[0]));
-    }
-  }
-  for (const month of touchedMonths) {
+  for (const month of Object.keys(pending)) {
+    if (pending[month].length === 0) continue;
     const fp = path.join(SHADOW_DIR, month + '.jsonl');
     const prev = existsSync(fp) ? readFileSync(fp, 'utf8') : '';
-    const keepLines = [];
-    for (const line of prev.split('\n')) {
-      const t = line.trim();
-      if (!t) continue;
-      let rec;
-      try {
-        rec = JSON.parse(t);
-      } catch {
-        keepLines.push(t); // パース不能行は念のため保持（データ消失防止）
-        continue;
-      }
-      if (rec && rec.date && rec.race != null) {
-        const key = rec.date.replace(/-/g, '') + '|' + rec.race;
-        if (replacedKeys.has(key)) continue; // 旧レコードを捨てる（新レコードが後で追記される）
-      }
-      keepLines.push(t);
-    }
-    const newLines = pending[month] || [];
-    const allLines = keepLines.concat(newLines);
-    if (allLines.length === 0) continue;
-    writeFileSync(fp, allLines.join('\n') + '\n');
-    writtenLines += newLines.length;
+    const prefix = prev && !prev.endsWith('\n') ? prev + '\n' : prev;
+    writeFileSync(fp, prefix + pending[month].join('\n') + '\n');
+    writtenLines += pending[month].length;
   }
 
   console.log('shadow_crawl 完了:', JSON.stringify(stats));
