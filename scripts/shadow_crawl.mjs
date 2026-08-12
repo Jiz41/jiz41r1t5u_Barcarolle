@@ -1,10 +1,11 @@
 #!/usr/bin/env node
 // GASレス・シャドーログ収集器。
-// BoatraceOpenAPI (programs/previews/results v3) から戸田(stadium_number===2)の全レースを取り、
-// logic/toda_logic.mjs の predictRace をそのまま使って予想を再構成し、結果・精算を JSONL で蓄積する。
+// BoatraceOpenAPI 統合API (api/v1、旧programs/previews/results v3は非推奨化済み) から
+// 戸田(stadium_number===2)の全レースを取り、logic/toda_logic.mjs の predictRace をそのまま使って
+// 予想を再構成し、結果・精算を JSONL で蓄積する。
 //
-// - 予想入力(programs/previews)のマッピングは index.html の programBoatToInput / applyExhibition と同一。
-// - 買い目は predictRace が返す3連単("n-n-n")のみ。精算は results.payouts.trifecta の combination と突き合わせる
+// - 予想入力(racers/preview)のマッピングは index.html の programBoatToInput / applyExhibition と同一。
+// - 買い目は predictRace が返す3連単("n-n-n")のみ。精算は result.payouts.trifecta の combination と突き合わせる
 //   （replay/run.mjs の trifecta 精算と同一の考え方。predictRace は3連複を生成しないため trio は精算対象外）。
 // - START_DATE〜本日(JST)のうち未記録の日/レースを埋める。欠測日は次回実行時に自動バックフィルされる。
 // - 出力先は SHADOW_DIR 環境変数で差し替え可能（既定: このファイルから見た ../data/shadow）。
@@ -66,9 +67,9 @@ function enumerateDates(startCompact, endCompact) {
 
 // ---------- 取得 ----------
 
-function apiUrl(kind, compact) {
+function apiUrl(compact) {
   const year = compact.slice(0, 4);
-  return `${BASE}/${kind}/v3/${year}/${compact}.json`;
+  return `${BASE}/api/v1/${year}/${compact}.json`;
 }
 
 async function fetchJson(url) {
@@ -82,49 +83,38 @@ async function fetchJson(url) {
   }
 }
 
-// programs/previews/results いずれも「フラット {kind:[...]}」と
-// 「直近日 {today:{kind:[...]}, yesterday:{kind:[...]}}」の両形がある。
-// index.html の extractProgramsForDate と同じく両対応で、date一致 かつ 戸田のみ抽出する。
-function extractForDate(data, kind, dashDate) {
-  let pools = [];
-  if (data && Array.isArray(data[kind])) pools = pools.concat(data[kind]);
-  if (data && data.today && Array.isArray(data.today[kind])) pools = pools.concat(data.today[kind]);
-  if (data && data.yesterday && Array.isArray(data.yesterday[kind])) pools = pools.concat(data.yesterday[kind]);
-  return pools.filter((p) => p.date === dashDate && p.stadium_number === TODA_STADIUM);
+// data.programs.stadiums["2"].races から、date一致する戸田のレースを抽出する。
+// kindごとに別プールを見る必要はなくなった（1レースオブジェクトに racers/preview/result が同居）。
+function extractForDate(data, dashDate) {
+  if (!data || !data.programs || !data.programs.stadiums) return [];
+  const stadium = data.programs.stadiums[String(TODA_STADIUM)];
+  if (!stadium || !stadium.races) return [];
+  return Object.keys(stadium.races)
+    .map((k) => stadium.races[k])
+    .filter((r) => r.date === dashDate);
 }
 
-// ---------- マッピング（index.html と同一） ----------
-
-const CLASS_NUMBER_TO_LABEL = { 1: 'A1', 2: 'A2', 3: 'B1', 4: 'B2' };
+// ---------- マッピング（index.html の programBoatToInput / applyExhibition と同一） ----------
 
 function programBoatToInput(pb) {
   return {
-    boat: pb.racer_boat_number,
-    loc_win: typeof pb.racer_local_top_1_percent === 'number' ? pb.racer_local_top_1_percent : null,
-    nat_win: typeof pb.racer_national_top_1_percent === 'number' ? pb.racer_national_top_1_percent : null,
-    motor_2r: typeof pb.racer_assigned_motor_top_2_percent === 'number' ? pb.racer_assigned_motor_top_2_percent : null,
-    boat_2r: typeof pb.racer_assigned_boat_top_2_percent === 'number' ? pb.racer_assigned_boat_top_2_percent : null,
-    exhibition: null, // previews が取れたら後で上書き
-    class: Object.prototype.hasOwnProperty.call(CLASS_NUMBER_TO_LABEL, pb.racer_class_number)
-      ? CLASS_NUMBER_TO_LABEL[pb.racer_class_number]
-      : null,
+    boat: pb.entry_number,
+    loc_win: typeof pb.local_win_rate === 'number' ? pb.local_win_rate : null,
+    nat_win: typeof pb.national_win_rate === 'number' ? pb.national_win_rate : null,
+    motor_2r: typeof pb.motor_top_2_percent === 'number' ? pb.motor_top_2_percent : null,
+    boat_2r: typeof pb.boat_top_2_percent === 'number' ? pb.boat_top_2_percent : null,
+    exhibition: null, // previewが取れたら後で上書き
+    class: pb.rank_number_source || null,
   };
 }
 
-// previews.boats はオブジェクト形（キー "0".."5" や "1".."6" のいずれもあり得る）。
-// Object.values で走査し racer_boat_number で艇番一致させる（index.html は boats[String(boat)] だが
-// 本器はキー体系の差異に頑健にするため値配列で照合する）。
 function applyExhibition(inputs, previewRace) {
-  if (!previewRace || !previewRace.boats) return false;
-  const byBoat = {};
-  Object.values(previewRace.boats).forEach((pb) => {
-    if (pb && typeof pb.racer_boat_number === 'number') byBoat[pb.racer_boat_number] = pb;
-  });
+  if (!previewRace || !previewRace.racers) return false;
   let applied = false;
   inputs.forEach((inp) => {
-    const pb = byBoat[inp.boat];
-    if (pb && typeof pb.racer_exhibition_time === 'number') {
-      inp.exhibition = pb.racer_exhibition_time;
+    const pb = previewRace.racers[String(inp.boat)];
+    if (pb && typeof pb.exhibition_time === 'number') {
+      inp.exhibition = pb.exhibition_time;
       applied = true;
     }
   });
@@ -133,13 +123,13 @@ function applyExhibition(inputs, previewRace) {
 
 // ---------- 精算 ----------
 
-// results.boats から着順(1〜3着)の艇番を返す。DNS/失格等で place が 1..3 に無い場合は null。
+// result.racers から着順(1〜3着)の艇番を返す。DNS/失格等で place が 1..3 に無い場合は null。
 function extractFinish(resultRace) {
   const finish = [null, null, null];
-  if (!resultRace || !Array.isArray(resultRace.boats)) return finish;
-  resultRace.boats.forEach((b) => {
-    const place = b.racer_place_number;
-    if (place >= 1 && place <= 3) finish[place - 1] = b.racer_boat_number;
+  if (!resultRace || !resultRace.racers) return finish;
+  Object.values(resultRace.racers).forEach((b) => {
+    const place = b.place_number;
+    if (place >= 1 && place <= 3) finish[place - 1] = b.entry_number;
   });
   return finish;
 }
@@ -199,7 +189,7 @@ function loadExisting() {
 // ---------- レコード生成 ----------
 
 function buildRaceRecord(dash, programRace, previewRace, resultRace, crawledAt) {
-  const inputs = (programRace.boats || []).map(programBoatToInput);
+  const inputs = Object.values(programRace.racers || {}).map(programBoatToInput);
   inputs.sort((a, b) => a.boat - b.boat);
   const a1Count = inputs.filter((i) => i.class === 'A1').length;
   applyExhibition(inputs, previewRace);
@@ -208,11 +198,12 @@ function buildRaceRecord(dash, programRace, previewRace, resultRace, crawledAt) 
   const base = {
     schema: 1,
     date: dash,
-    race: programRace.number,
+    race: programRace.race_number,
     title: programRace.title ?? null,
     grade_number: typeof programRace.grade_number === 'number' ? programRace.grade_number : null,
     a1_count: a1Count,
     engine_version: ENGINE_VERSION,
+    entries: inputs,
   };
 
   const finish = extractFinish(resultRace);
@@ -280,10 +271,10 @@ async function main() {
     const dash = compactToDash(compact);
     const crawledAt = new Date().toISOString();
 
-    const programsRes = await fetchJson(apiUrl('programs', compact));
-    const programRaces = programsRes.ok ? extractForDate(programsRes.data, 'programs', dash) : [];
+    const apiRes = await fetchJson(apiUrl(compact));
+    const dayRaces = apiRes.ok ? extractForDate(apiRes.data, dash) : [];
 
-    if (programRaces.length === 0) {
+    if (dayRaces.length === 0) {
       // 戸田非開催 or 未アーカイブ。過去日はセンチネルで確定させ再取得を防ぐ（本日は未確定なので残す）。
       if (!isToday) {
         addLine(compact, { schema: 1, date: dash, no_toda: true, crawled_at: crawledAt });
@@ -294,20 +285,16 @@ async function main() {
     }
 
     stats.daysFetched++;
-    const previewsRes = await fetchJson(apiUrl('previews', compact));
-    const resultsRes = await fetchJson(apiUrl('results', compact));
-    const previewRaces = previewsRes.ok ? extractForDate(previewsRes.data, 'previews', dash) : [];
-    const resultRaces = resultsRes.ok ? extractForDate(resultsRes.data, 'results', dash) : [];
 
-    for (const programRace of programRaces) {
-      const raceNo = programRace.number;
+    for (const programRace of dayRaces) {
+      const raceNo = programRace.race_number;
       const key = compact + '|' + raceNo;
       if (recordedRaceKeys.has(key)) continue;
 
-      const resultRace = resultRaces.find((r) => r.number === raceNo);
+      const resultRace = programRace.result || null;
       if (!resultRace) continue; // 未確定（未発走）。次回以降にバックフィル。
 
-      const previewRace = previewRaces.find((r) => r.number === raceNo) || null;
+      const previewRace = programRace.preview || null;
       const rec = buildRaceRecord(dash, programRace, previewRace, resultRace, crawledAt);
       addLine(compact, rec);
       recordedRaceKeys.add(key);
