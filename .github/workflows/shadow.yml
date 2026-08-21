@@ -1,0 +1,57 @@
+name: shadow-crawl
+
+on:
+  schedule:
+    - cron: '30 14 * * *' # JST 23:30
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: shadow-crawl
+  cancel-in-progress: false
+
+jobs:
+  crawl:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (full history)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Checkout or create shadow-data branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          if git ls-remote --exit-code --heads origin shadow-data; then
+            git fetch origin shadow-data
+            git checkout -B shadow-data origin/shadow-data
+          else
+            git checkout -B shadow-data origin/main
+          fi
+
+      - name: Sync scripts and logic from main
+        run: |
+          git fetch origin main
+          git checkout origin/main -- scripts logic
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run shadow crawl
+        run: node scripts/shadow_crawl.mjs
+
+      - name: Commit and push shadow data
+        run: |
+          git add data/shadow
+          if git diff --cached --quiet; then
+            echo "差分なし。コミットをスキップします。"
+            exit 0
+          fi
+          STAMP=$(TZ=Asia/Tokyo date +%Y%m%d)
+          git commit -m "shadow: ${STAMP}分を記録 [skip ci]"
+          git push origin shadow-data

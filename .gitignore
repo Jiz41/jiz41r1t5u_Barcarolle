@@ -1,0 +1,8 @@
+# 憲章: 生データ(mbrace K/Bファイル)の再配布・転載は永久禁止
+data/raw/
+data/.parse_tmp/
+data/collect_run.log
+data/collect_failures.log
+data/fixtures/toda_races.json
+# 遡及記録の解析用退避（gitには入れない、裏材料）
+data/research_backfill_20260601_0710.jsonl
