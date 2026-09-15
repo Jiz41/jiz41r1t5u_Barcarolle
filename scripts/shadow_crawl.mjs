@@ -22,6 +22,8 @@ const STAKE_PER_POINT = 100;
 const ENGINE_VERSION = 'v0.3.2'; // toda_logic にバージョン輸出が無いため定数で固定
 const TODA_STADIUM = 2;
 const RACES_PER_DAY = 12; // 戸田は常時12R。全レース記録済みの過去日は完了扱いにする
+const EXHIBITION_RETRY_WINDOW_DAYS = 30; // 展示タイム欠測（no_exhibition）はAPI側の反映遅延の可能性があるため、
+// 直近この日数以内なら「未完了」として再取得を試みる。それより古い欠測はAPI側に恒久的に無いとみなし諦める。
 const BASE = 'https://boatraceopenapi.github.io';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -154,7 +156,14 @@ function round4(n) {
 
 // ---------- 既存レコードの読み込み ----------
 
-function loadExisting() {
+// 2つのYYYYMMDD間の日数差（UTC正午基準、TZ境界のズレを避ける）
+function daysBetween(fromCompact, toCompact) {
+  const toDate = (c) =>
+    new Date(Date.UTC(Number(c.slice(0, 4)), Number(c.slice(4, 6)) - 1, Number(c.slice(6, 8)), 12));
+  return Math.round((toDate(toCompact) - toDate(fromCompact)) / 86400000);
+}
+
+function loadExisting(todayCompact) {
   const recordedRaceKeys = new Set(); // "YYYYMMDD|race"
   const sentinelDates = new Set(); // 非開催マーカーのある日
   const raceCountByDate = {}; // YYYYMMDD -> 記録済みレース数
@@ -178,8 +187,13 @@ function loadExisting() {
         continue;
       }
       if (rec.race != null) {
-        recordedRaceKeys.add(compact + '|' + rec.race);
-        raceCountByDate[compact] = (raceCountByDate[compact] || 0) + 1;
+        const staleIncomplete =
+          rec.exhibition_ready === false &&
+          daysBetween(compact, todayCompact) <= EXHIBITION_RETRY_WINDOW_DAYS;
+        if (!staleIncomplete) {
+          recordedRaceKeys.add(compact + '|' + rec.race);
+          raceCountByDate[compact] = (raceCountByDate[compact] || 0) + 1;
+        }
       }
     }
   }
@@ -246,7 +260,7 @@ function buildRaceRecord(dash, programRace, previewRace, resultRace, crawledAt) 
 async function main() {
   mkdirSync(SHADOW_DIR, { recursive: true });
   const today = todayJstCompact();
-  const { recordedRaceKeys, sentinelDates, raceCountByDate } = loadExisting();
+  const { recordedRaceKeys, sentinelDates, raceCountByDate } = loadExisting(today);
   const dates = enumerateDates(START_DATE, today);
 
   // 月ごとに追記行を貯める
@@ -304,14 +318,36 @@ async function main() {
     }
   }
 
-  // 追記（既存内容の末尾に足す。ファイルは date の月で分ける）
+  // 追記（既存内容に足す。ただし今回のレコードが上書きするキー[date|race]の
+  // 旧行（展示タイム欠測でno_exhibitionだったもの等）は残さず取り除いてから足す。
+  // ファイルは date の月で分ける）
   let writtenLines = 0;
   for (const month of Object.keys(pending)) {
     if (pending[month].length === 0) continue;
     const fp = path.join(SHADOW_DIR, month + '.jsonl');
-    const prev = existsSync(fp) ? readFileSync(fp, 'utf8') : '';
-    const prefix = prev && !prev.endsWith('\n') ? prev + '\n' : prev;
-    writeFileSync(fp, prefix + pending[month].join('\n') + '\n');
+    const newKeysThisRun = new Set(
+      pending[month]
+        .map((s) => JSON.parse(s))
+        .filter((o) => o.race != null)
+        .map((o) => o.date.replace(/-/g, '') + '|' + o.race)
+    );
+    const prevLines = existsSync(fp) ? readFileSync(fp, 'utf8').split('\n') : [];
+    const keptLines = prevLines.filter((line) => {
+      const t = line.trim();
+      if (!t) return false;
+      let old;
+      try {
+        old = JSON.parse(t);
+      } catch {
+        return true; // パース不能行は温存（誤って消さない）
+      }
+      if (old && old.race != null) {
+        const key = old.date.replace(/-/g, '') + '|' + old.race;
+        if (newKeysThisRun.has(key)) return false; // 今回の新レコードで上書きされる旧行は除去
+      }
+      return true;
+    });
+    writeFileSync(fp, [...keptLines, ...pending[month]].join('\n') + '\n');
     writtenLines += pending[month].length;
   }
 
